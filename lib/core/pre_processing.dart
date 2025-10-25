@@ -1,8 +1,25 @@
+/// Biblioteca de pré-processamento de imagens para o pacote `tflite_vision`.
+/// Contém utilitários para conversão entre bytes/ui.Image e tensores, redimensionamento, normalização e codificação de imagens.
+/// 
+/// Classes:
+/// - PreProcessing: Classe responsável pelo pré-processamento de imagens para modelos TFLite.
+library;
+
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:image/image.dart' as img;
 
+/// Classe responsável pelo pré-processamento de imagens para modelos TFLite.
+/// 
+/// Métodos Estáticos:
+/// - fromUiImage: Converte um [ui.Image] em bytes PNG ([Uint8List]).
+/// - imageToTensor: Converte bytes de imagem em um tensor 4D normalizado
+/// - tensorToImage: Converte tensor normalizado (4D) de volta para imagem
+/// - tensorToImageBytes: Converte tensor normalizado (4D) de volta para bytes de imagem PNG
+/// - processImage: Função que orquestra o pré-processamento completo
 class PreProcessing {
+
+  /// Converte um [ui.Image] em bytes PNG ([Uint8List]).
   static Future<Uint8List> fromUiImage(ui.Image image) async {
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     if (byteData == null) {
@@ -11,6 +28,7 @@ class PreProcessing {
     return byteData.buffer.asUint8List();
   }
 
+  /// Converte bytes de imagem em um tensor 4D normalizado
   static Future<List<List<List<List<double>>>>> imageToTensor(
     Uint8List imageBytes,
     int tensorWidth,
@@ -50,7 +68,7 @@ class PreProcessing {
     return tensor;
   }
 
-  /// Converte tensor normalizado (4D) de volta para imagem
+  /// Converte um tensor normalizado (4D) de volta para imagem
   static img.Image tensorToImage(
     List<List<List<List<double>>>> tensor,
   ) {
@@ -94,7 +112,8 @@ class PreProcessing {
 
     return image;
   }
-
+  
+  /// Converte um tensor normalizado (4D) de volta para bytes de imagem PNG
   static Uint8List tensorToImageBytes(
     List<List<List<List<double>>>> tensor,
   ) {
@@ -102,7 +121,7 @@ class PreProcessing {
     return Uint8List.fromList(img.encodePng(image));
   }
 
-  /// Função que orquestra o pré-processamento completo
+  /// Orquestra o pré-processamento completo: converte bytes de imagem em tensor 4D normalizado
   static Future<List<List<List<List<double>>>>> processImage(
     Uint8List imageBytes, {
     int width = 640,

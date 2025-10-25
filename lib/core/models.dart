@@ -1,17 +1,33 @@
+/// Biblioteca de modelos para o pacote `tflite_vision`.
+/// Contém classes para modelos de segmentação e classificação TFLite.
+/// Classes:
+/// - TFLiteSegmentModel: Modelo de segmentação TFLite.
+/// - TFLiteClassifyModel: Modelo de classificação TFLite.
+library;
+
 import 'package:flutter/foundation.dart';
 import './results.dart';
 import './utils.dart';
 import './base.dart';
 
-
+/// Classe que estende [TFLiteModel] para modelos de segmentação.
+/// 
+/// Métodos:
+/// - loadModel: Carrega o modelo de segmentação TFLite e os rótulos a partir dos caminhos fornecidos.
+/// - predict: Realiza a predição de segmentação em uma imagem de entrada.
+/// - forward: Executa a inferência do modelo com o tensor de entrada.
+/// - getResult: Processa as saídas do modelo para gerar o resultado de segmentação
 class TFLiteSegmentModel extends TFLiteModel {
-  TFLiteSegmentModel(
-      {required super.mainInterpreter,
-      required super.isolateInterpreter,
-      required super.inputShape,
-      required super.outputShapes,
-      required super.labels});
+  TFLiteSegmentModel({
+    required super.mainInterpreter,
+    required super.isolateInterpreter,
+    required super.inputShape,
+    required super.outputShapes,
+    required super.labels
+  });
 
+  /// Carrega o modelo TFLite e os rótulos a partir dos caminhos fornecidos.
+  /// Retorna uma instância de [TFLiteSegmentModel] pronta para uso.
   static Future<TFLiteSegmentModel> loadModel({
     required String modelPath,
     required String labelsPath,
@@ -30,6 +46,8 @@ class TFLiteSegmentModel extends TFLiteModel {
     );
   }
 
+  /// Realiza a predição de segmentação em uma imagem de entrada.
+  /// Retorna um [SegmentationResult] contendo os resultados da segmentação.
   Future<SegmentationResult> predict(
     List<List<List<List<double>>>> inputTensor,
     Uint8List originalImageBytes,
@@ -38,6 +56,8 @@ class TFLiteSegmentModel extends TFLiteModel {
     return getResult(outputs, originalImageBytes);
   }
 
+  /// Executa a inferência do modelo com o tensor de entrada.
+  /// Retorna um mapa contendo as saídas do modelo.
   Future<Map<int, Object>> forward(
     List<List<List<List<double>>>> inputTensor,
     Uint8List originalImageBytes,
@@ -54,6 +74,8 @@ class TFLiteSegmentModel extends TFLiteModel {
     }
   }
 
+  /// Processa as saídas do modelo para gerar o resultado de segmentação
+  /// Retorna um [SegmentationResult] contendo os resultados da segmentação.
   SegmentationResult getResult (
     Map<int, Object> outputs,
     Uint8List originalImageBytes,
@@ -101,7 +123,13 @@ class TFLiteSegmentModel extends TFLiteModel {
   }
 }
 
-
+/// Classe que estende [TFLiteModel] para modelos de classificação.
+/// 
+/// Métodos:
+/// - loadModel: Carrega o modelo de classificação TFLite e os rótulos a partir dos caminhos fornecidos.
+/// - predict: Realiza a predição de classificação em uma imagem de entrada.
+/// - forward: Executa a inferência do modelo com o tensor de entrada.
+/// - getResult: Processa as saídas do modelo para gerar o resultado de classificação
 class TFLiteClassifyModel extends TFLiteModel {
   TFLiteClassifyModel(
       {required super.mainInterpreter,
@@ -110,6 +138,8 @@ class TFLiteClassifyModel extends TFLiteModel {
       required super.outputShapes,
       required super.labels});
 
+  /// Carrega o modelo TFLite e os rótulos a partir dos caminhos fornecidos.
+  /// Retorna uma instância de [TFLiteClassifyModel] pronta para uso
   static Future<TFLiteClassifyModel> loadModel({
     required String modelPath,
     required String labelsPath,
@@ -127,7 +157,8 @@ class TFLiteClassifyModel extends TFLiteModel {
       labels: baseModel.labels,
     );
   }
-
+  /// Realiza a predição de classificação em uma imagem de entrada.
+  /// Retorna um [ClassificationResult] contendo os resultados da classificação.
   Future<ClassificationResult> predict(
     List<List<List<List<double>>>> inputTensor,
     Uint8List originalImageBytes,
@@ -136,6 +167,8 @@ class TFLiteClassifyModel extends TFLiteModel {
     return getResult(outputs, originalImageBytes);
   }
 
+  /// Executa a inferência do modelo com o tensor de entrada.
+  /// Retorna um mapa contendo as saídas do modelo.
   Future<Map<int, Object>> forward(
     List<List<List<List<double>>>> inputTensor,
     Uint8List originalImageBytes,
@@ -150,6 +183,8 @@ class TFLiteClassifyModel extends TFLiteModel {
     }
   }
 
+  /// Processa as saídas do modelo para gerar o resultado de classificação
+  /// Retorna um [ClassificationResult] contendo os resultados da classificação.
   ClassificationResult getResult (
     Map<int, Object> outputs,
     Uint8List originalImageBytes,
