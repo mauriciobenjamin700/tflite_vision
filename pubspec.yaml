@@ -1,7 +1,10 @@
 name: tflite_vision
 description: "A simplified flutter package for classification and segmentation inference using TFLite models"
-version: 0.0.1
+version: 1.0.0
 homepage: https://github.com/mauriciobenjamin700/tflite_vision
+repository: https://github.com/mauriciobenjamin700/tflite_vision
+issue_tracker: https://github.com/mauriciobenjamin700/tflite_vision/issues
+documentation: https://github.com/mauriciobenjamin700/tflite_vision/wiki
 
 environment:
   sdk: ^3.8.1
