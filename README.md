@@ -1,183 +1,125 @@
-<!--
-This README describes the package. If you publish this package to pub.dev,
-this README's contents appear on the landing page for your package.
-
-For information about how to write a good package README, see the guide for
-[writing package pages](https://dart.dev/tools/pub/writing-package-pages).
-
-For general information about developing packages, see the Dart guide for
-[creating packages](https://dart.dev/guides/libraries/create-packages)
-and the Flutter guide for
-[developing packages and plugins](https://flutter.dev/to/develop-packages).
--->
 # TFLite Vision
 
-Biblioteca Flutter/Dart para orquestrar modelos TFLite de segmentação e
-classificação (pré-processamento, carregamento de modelos e helpers para uso
-em apps Flutter).
+Biblioteca Flutter/Dart para orquestrar modelos TFLite de segmentação e classificação, com utilitários para pré-processamento, carregamento de modelos, execução de inferência e helpers para uso em apps Flutter.
 
-Este pacote reúne utilitários para:
+**Importante:** Este pacote espera que o usuário (app consumidor) forneça os arquivos de modelo (.tflite) e labels (.txt) nos assets do próprio app. O pacote não inclui modelos/labels por padrão.
 
-- Carregar modelos TFLite (segmentação e classificação);
-- Pré-processar imagens (redimensionamento e normalização para tensores);
-- Executar inferência de segmentação e, em seguida, classificação sobre a imagem segmentada;
-- Trabalhar com assets de modelos e labels embutidos no pacote.
+Principais recursos:
 
-## Recursos
+- Carregamento e execução de modelos TFLite (segmentação e/ou classificação)
+- Pré-processamento de imagens (redimensionamento, normalização, conversão para tensores)
+- Helpers para manipulação de resultados e assets
+- Pipeline completo via `AppState` (segmentação + classificação em sequência)
 
-- AppState: gestor de estado baseado em `ChangeNotifier` que carrega os modelos, armazena imagens originais segmentadas e expõe métodos para selecionar imagem e executar inferências.
-- PreProcessing: conversão entre `Uint8List` / `ui.Image` e tensores 4D usados pelos modelos (normalização 0.0–1.0 por padrão).
-- Model wrappers (em `core/models.dart`): adaptadores para carregar modelos TFLite e interpretar saídas (retornam `SegmentationResult` e `ClassificationResult`).
-- Utils & Results: helpers para extrair índices máximos, mapear labels e estruturas de resultado.
+> **Dica:** Os arquivos de modelo e labels devem estar declarados na seção `assets:` do `pubspec.yaml` do app consumidor.
 
-## Instalação
+## Como fornecer os modelos e labels
 
-Opções para consumir o pacote em outro projeto:
-
-- Via pub.dev (após publicação):
-
-Adicione no `pubspec.yaml` do app consumidor:
-
-```yaml
-dependencies:
-    tflite_vision: ^0.0.1
-```
-
-- Via Git (sem publicar):
-
-```yaml
-dependencies:
-    tflite_vision:
-        git:
-            url: https://github.com/SEU-REPO/tflite_vision.git
-            ref: main
-```
-
-- Via path (desenvolvimento local):
-
-```yaml
-dependencies:
-    tflite_vision:
-        path: ../tflite_vision
-```
-
-Após adicionar, rode:
+Você deve adicionar os arquivos `.tflite` e `.txt` (labels) nos assets do seu app Flutter. Exemplo de estrutura:
 
 ```bash
-flutter pub get
+assets/
+  segment_float16.tflite
+  classify_float16.tflite
+  segment_labels.txt
+  classify_labels.txt
 ```
 
-## Assets (modelos e labels)
+No seu `pubspec.yaml`:
 
-O pacote inclui (ou deve incluir) os arquivos de modelo e labels em
-`assets/` (por exemplo `assets/segment_float16.tflite`,
-`assets/classify_float16.tflite`, `assets/segment_labels.txt`,
-`assets/classify_labels.txt`). Certifique-se de declarar esses assets em
-`pubspec.yaml` do pacote para que consumidores possam acessá‑los.
+```yaml
+flutter:
+  assets:
+    - assets/segment_float16.tflite
+    - assets/classify_float16.tflite
+    - assets/segment_labels.txt
+    - assets/classify_labels.txt
+```
 
-Quando o pacote é usado por um app Flutter, os assets do pacote ficam
-disponíveis no bundle do app com o prefixo `packages/<packageName>/...`.
-
-Exemplo de leitura de asset do pacote:
+Para carregar um asset no seu app:
 
 ```dart
 import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 
-final data = await rootBundle.load('packages/tflite_vision/assets/segment_float16.tflite');
+final data = await rootBundle.load('assets/segment_float16.tflite');
 final bytes = data.buffer.asUint8List();
 // use 'bytes' para carregar o modelo em tflite_flutter
 ```
 
-## Uso (exemplos)
-
-Importe a API pública:
+### 1. Classificação isolada
 
 ```dart
 import 'package:tflite_vision/tflite_vision.dart';
-```
+import 'package:flutter/services.dart' show rootBundle;
 
-Criar o gestor de estado com caminhos personalizados para modelos/labels:
-
-```dart
-final appState = AppState(
-    segmentModelPath: 'packages/tflite_vision/assets/custom_segment.tflite',
-    segmentLabelsPath: 'packages/tflite_vision/assets/segment_labels.txt',
-    classifyModelPath: 'packages/tflite_vision/assets/classify_float16.tflite',
-    classifyLabelsPath: 'packages/tflite_vision/assets/classify_labels.txt',
+// Carregar modelo e labels do assets do app
+final classifyModel = await TFLiteClassifyModel.loadModel(
+  modelPath: 'assets/classify_float16.tflite',
+  labelsPath: 'assets/classify_labels.txt',
 );
+
+// Carregar imagem (exemplo: asset)
+final imageBytes = (await rootBundle.load('assets/test_image.jpg')).buffer.asUint8List();
+
+// Pré-processar imagem
+final inputTensor = await PreProcessing.imageToTensor(
+  imageBytes,
+  classifyModel.inputShape[2],
+  classifyModel.inputShape[1],
+);
+
+// Executar inferência
+final result = await classifyModel.predict(inputTensor, imageBytes);
+print('Classe: \\${result.label}, confiança: \\${result.confidence}');
 ```
 
-Selecionar uma imagem e executar inferência:
+### 2. Segmentação isolada
 
 ```dart
-// imageBytes é Uint8List (por ex. lido de ImagePicker ou de um asset)
+import 'package:tflite_vision/tflite_vision.dart';
+import 'package:flutter/services.dart' show rootBundle;
+
+final segmentModel = await TFLiteSegmentModel.loadModel(
+  modelPath: 'assets/segment_float16.tflite',
+  labelsPath: 'assets/segment_labels.txt',
+);
+
+final imageBytes = (await rootBundle.load('assets/test_image.jpg')).buffer.asUint8List();
+
+final inputTensor = await PreProcessing.imageToTensor(
+  imageBytes,
+  segmentModel.inputShape[2],
+  segmentModel.inputShape[1],
+);
+
+final result = await segmentModel.predict(inputTensor, imageBytes);
+print('Segmentação: \\${result.label}, máscara: \\${result.mask?.length} bytes');
+```
+
+### 3. Pipeline completo com AppState (segmentação + classificação)
+
+```dart
+import 'package:tflite_vision/tflite_vision.dart';
+import 'package:flutter/services.dart' show rootBundle;
+
+final appState = AppState(
+  segmentModelPath: 'assets/segment_float16.tflite',
+  segmentLabelsPath: 'assets/segment_labels.txt',
+  classifyModelPath: 'assets/classify_float16.tflite',
+  classifyLabelsPath: 'assets/classify_labels.txt',
+);
+
+final imageBytes = (await rootBundle.load('assets/test_image.jpg')).buffer.asUint8List();
 await appState.selectImage(imageBytes);
 await appState.runInference();
 
-// resultados:
-final segmentation = appState.segmentationResult; // SegmentationResult?
-final classification = appState.classificationResult; // ClassificationResult?
-final processed = appState.processedImage; // Uint8List da imagem segmentada
+final segmentation = appState.segmentationResult;
+final classification = appState.classificationResult;
+final processed = appState.processedImage;
+
+print('Segmentação: \\${segmentation?.label}');
+print('Classificação: \\${classification?.label} (confiança: \\${classification?.confidence})');
 ```
 
-Notas de uso:
-
-- `AppState.runInference()` primeiro executa o modelo de segmentação sobre a imagem original e, em seguida, executa o modelo de classificação sobre a imagem segmentada.
-- Os campos `segmentModelPath`, `segmentLabelsPath`, `classifyModelPath` e `classifyLabelsPath` são configuráveis — podem ser passados no construtor ou alterados em tempo de execução via `updateModelPaths(...)`.
-
-## API rápida (principais símbolos)
-
-- `AppState` — gestor central. Principais métodos:
-  - `selectImage(Uint8List imageBytes)` — armazena a imagem original.
-  - `runInference()` — executa segmentação e classificação (assíncrono).
-  - `updateModelPaths(...)` — troca paths e recarrega os modelos.
-  - getters: `isLoading`, `areModelsLoaded`, `classificationResult`,  `segmentationResult`, `processedImage`.
-
-- `PreProcessing` — utilitários estáticos:
-  - `fromUiImage(ui.Image)` — converte `ui.Image` para `Uint8List`.
-  - `imageToTensor(Uint8List, int width, int height)` — retorna tensor 4D normalizado (0.0..1.0) compatível com modelos que esperam floats.
-  - `tensorToImage(...)` e `tensorToImageBytes(...)` — inverter o tensor para imagem PNG.
-
-- Model wrappers (`TFLiteSegmentModel`, `TFLiteClassifyModel`) — métodos:
-  - `loadModel({required modelPath, required labelsPath})` — carrega modelo/labels (suporta paths/em bytes conforme implementado internamente).
-  - `predict(...)` — executa inferência e retorna estruturas de resultado (`SegmentationResult`, `ClassificationResult`).
-
-## Contrato esperado dos modelos
-
-- Input shapes: `TFLite*Model.inputShape` é usado para redimensionar a imagem antes da inferência. Confirme o ordenamento (por exemplo, `[1, height, width, channels]`), pois o pré-processamento redimensiona conforme `width` e `height` passados.
-- Normalização: a implementação atual normaliza pixels para 0.0–1.0 (float). Verifique se seus modelos esperam uint8 (0–255) ou float e ajuste o pré-processamento caso necessário.
-- Channels: os utilitários trabalham com RGB (3 canais). Se seus modelos esperam RGBA ou grayscale, adapte `PreProcessing`.
-
-## Boas práticas para empacotar e publicar
-
-1. Atualize `pubspec.yaml` com `name`, `version`, `description`, `homepage` e `authors`.
-2. Declare os assets (`flutter.assets:`) em `pubspec.yaml` do pacote.
-3. Inclua `README.md`, `CHANGELOG.md` e `LICENSE` completos.
-4. Teste localmente:
-
-```bash
-flutter pub get
-flutter analyze
-flutter test
-flutter pub publish --dry-run
-```
-
-Publique em `pub.dev` ou forneça acesso via `git`/`path` no `pubspec.yaml` do projeto consumidor.
-
-## Exemplo mínimo (sugestão)
-
-Crie a pasta `example/` com um app Flutter que demonstra:
-
-- Carregar modelos do pacote;
-- Selecionar imagem (camera/gallery);
-- Executar `runInference()` e mostrar `processedImage` + `classification`.
-
-## Contribuindo
-
-1. Abra uma issue descrevendo o problema/feature.
-2. Faça um fork, crie uma branch e envie um pull request com testes e descrições claras.
-
-## Licença
-
-Este repositório inclui a `LICENSE` na raiz; verifique-a antes de usar.
+> **Nota:** Os exemplos assumem que os assets de modelo/labels estão corretamente declarados no `pubspec.yaml` do app consumidor. Ajuste os paths conforme necessário.

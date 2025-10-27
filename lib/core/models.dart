@@ -81,7 +81,7 @@ class TFLiteSegmentModel extends TFLiteModel {
     Uint8List originalImageBytes,
   ) {
     final segmentationThreshold = 0.5; // Threshold de confiança
-    final firstCoeffIndex = 5;
+    final firstCoeffIndex = 5;  // Índice da primeira coluna dos coeficientes da máscara
     double confidence;
     
     final segmentations = (outputs[0] as List<List<List<double>>>)[0];

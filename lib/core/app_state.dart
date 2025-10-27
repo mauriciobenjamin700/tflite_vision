@@ -1,9 +1,25 @@
+/// Gerencia o estado da aplicação, incluindo o carregamento dos modelos,
+/// a seleção de imagens e a execução da inferência.
+///
+/// Classes:
+///   - AppState: Classe que gerencia o estado da aplicação. Fornece métodos para carregar modelos,  selecionar imagens e executar a inferência.
+///   Use esta classe para manter o estado da aplicação relacionado à visão computacional com TFLite, caso precise de funcionalidades básicas.
+library;
+
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import './models.dart';
 import './pre_processing.dart';
 import './results.dart';
 
+/// Classe que gerencia o estado da aplicação, incluindo o carregamento dos modelos,
+/// a seleção de imagens e a execução da inferência.
+///
+/// Propriedades:
+/// - segmentationModel: Modelo de segmentação TFLite carregado.
+/// - classifyModel: Modelo de classificação TFLite carregado.
+/// - classificationResult: Resultado da classificação.
+/// - segmentationResult: Resultado da segmentação.
 class AppState extends ChangeNotifier {
   TFLiteSegmentModel? _segmentationModel;
   TFLiteClassifyModel? _classifyModel;
@@ -63,6 +79,11 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Seleciona uma nova imagem para inferência.
+  /// Limpa os resultados anteriores.
+  ///
+  /// Parâmetros:
+  /// - imageBytes: Bytes da imagem selecionada.
   Future<void> selectImage(Uint8List imageBytes) async {
     _originalImage = imageBytes;
     _processedImage = null;
@@ -71,6 +92,8 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Executa a inferência de segmentação e classificação na imagem selecionada.
+  /// Atualiza os resultados correspondentes.
   Future<void> runInference() async {
     if (_originalImage == null ||
         !_areModelsLoaded ||
@@ -120,6 +143,12 @@ class AppState extends ChangeNotifier {
   }
 
   /// Atualiza os paths dos modelos e recarrega-os imediatamente.
+  ///
+  /// Parâmetros:
+  /// - newSegmentModelPath: Novo path para o modelo de segmentação.
+  /// - newSegmentLabelsPath: Novo path para os labels de segmentação.
+  /// - newClassifyModelPath: Novo path para o modelo de classificação.
+  /// - newClassifyLabelsPath: Novo path para os labels de classificação.
   Future<void> updateModelPaths({
     required String newSegmentModelPath,
     required String newSegmentLabelsPath,
@@ -135,5 +164,4 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     await _loadModels();
   }
-
 }
